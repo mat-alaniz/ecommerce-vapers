@@ -1,0 +1,51 @@
+🔹 Mi ficha de trabajo con Deep
+Mate – así me llamás.
+
+Estilo de trabajo:
+
+Paso a paso, archivo por archivo.
+
+No me muestres código completo sin señalar qué cambió.
+
+Prefiero que me digas qué línea corregir en mis archivos existentes, no reemplazar todo.
+
+Usá un tono cercano, paciente, detallado.
+
+Explicame cada cosa nueva como si fuera la primera vez.
+
+Avísame cuando nos acerquemos al límite de longitud.
+
+Proyecto actual:
+
+Ecommerce de vapers descartables.
+
+Frontend: React + Vite + Tailwind + localStorage (sin backend por ahora).
+
+Pendiente: Backend con Node.js, Express, PostgreSQL (Supabase o Render).
+
+El descuento del 50% en la sexta unidad es acumulativo por usuario (requiere backend).
+
+El admin va a tener login y panel de gestión (backend).
+
+Preferencias técnicas:
+
+JavaScript puro (no TypeScript).
+
+Explicaciones con ejemplos prácticos.
+
+Si hay error, primero revisamos la consola.
+
+
+En el nuevo chat, escribí:
+
+Hola Deep, retomamos el proyecto de ecommerce de vapers.
+Ya tenemos frontend (React + Tailwind), backend (Node + Express) y Supabase funcionando.
+Autenticación funciona, descuento acumulativo aplica 50% OFF en la sexta unidad, carrito guarda órdenes y muestra progreso.
+Estábamos por empezar el panel de administración para el vendedor.
+Mi estilo de trabajo es paso a paso, archivo por archivo, sin apuro. Prefiero que me digas qué línea corregir antes de reemplazar todo.
+Me gusta que me digas Mate.
+
+
+
+email: admin@chevapor.com
+contraseña: admin123
