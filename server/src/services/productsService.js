@@ -1,5 +1,17 @@
 import { supabase } from '../config/supabase.js'
 
+const normalizeProductId = (productId) => {
+  const parsedId = Number.parseInt(productId, 10)
+
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    const invalidIdError = new Error('ID de producto invalido')
+    invalidIdError.statusCode = 400
+    throw invalidIdError
+  }
+
+  return parsedId
+}
+
 export const getAllProducts = async () => {
   const { data, error } = await supabase
     .from('products')
@@ -24,16 +36,24 @@ export const createProduct = async (productData) => {
 }
 
 export const updateProduct = async (productId, productData) => {
-  const { data, error } = await supabase
+  const normalizedProductId = normalizeProductId(productId)
+
+  const { error: updateError } = await supabase
     .from('products')
     .update(productData)
-    .eq('id', productId)
-    .select()
+    .eq('id', normalizedProductId)
+
+  if (updateError) throw updateError
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', normalizedProductId)
     .maybeSingle()
   
   if (error) throw error
   if (!data) {
-    const notFoundError = new Error('Producto no encontrado o sin permisos para editarlo')
+    const notFoundError = new Error('Producto no encontrado')
     notFoundError.statusCode = 404
     throw notFoundError
   }
@@ -42,16 +62,24 @@ export const updateProduct = async (productId, productData) => {
 }
 
 export const updateProductStock = async (productId, stockData) => {
-  const { data, error } = await supabase
+  const normalizedProductId = normalizeProductId(productId)
+
+  const { error: updateError } = await supabase
     .from('products')
     .update(stockData)
-    .eq('id', productId)
-    .select()
+    .eq('id', normalizedProductId)
+
+  if (updateError) throw updateError
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', normalizedProductId)
     .maybeSingle()
   
   if (error) throw error
   if (!data) {
-    const notFoundError = new Error('Producto no encontrado o sin permisos para actualizar stock')
+    const notFoundError = new Error('Producto no encontrado')
     notFoundError.statusCode = 404
     throw notFoundError
   }
@@ -60,16 +88,24 @@ export const updateProductStock = async (productId, stockData) => {
 }
 
 export const updateProductPrice = async (productId, priceData) => {
-  const { data, error } = await supabase
+  const normalizedProductId = normalizeProductId(productId)
+
+  const { error: updateError } = await supabase
     .from('products')
     .update(priceData)
-    .eq('id', productId)
-    .select()
+    .eq('id', normalizedProductId)
+
+  if (updateError) throw updateError
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', normalizedProductId)
     .maybeSingle()
   
   if (error) throw error
   if (!data) {
-    const notFoundError = new Error('Producto no encontrado o sin permisos para actualizar precio')
+    const notFoundError = new Error('Producto no encontrado')
     notFoundError.statusCode = 404
     throw notFoundError
   }

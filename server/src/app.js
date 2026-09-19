@@ -5,6 +5,7 @@ import productsRoutes from './routes/products.js'
 import authRoutes from './routes/auth.js'
 import ordersRoutes from './routes/orders.js'
 import adminRoutes from './routes/admin.js'
+import { supabase } from './config/supabase.js'
 
 dotenv.config()
 
@@ -38,21 +39,14 @@ app.listen(PORT, async () => {
   
   // Verificar conexión con Supabase
   try {
-    const response = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/products?select=count&limit=1`,
-      {
-        method: 'GET',
-        headers: {
-          'apikey': process.env.SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-        }
-      }
-    )
-    
-    if (response.ok) {
+    const { error } = await supabase
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+
+    if (!error) {
       console.log('✅ Supabase: conectado correctamente')
     } else {
-      console.log('❌ Supabase: conexión fallida -', response.status)
+      console.log('❌ Supabase: conexión fallida -', error.message)
     }
   } catch (err) {
     console.log('❌ Supabase: error de conexión -', err.message)
