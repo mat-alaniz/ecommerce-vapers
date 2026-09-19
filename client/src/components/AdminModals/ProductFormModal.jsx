@@ -18,6 +18,8 @@ const ProductFormModal = ({ isOpen, product, onSave, onClose }) => {
 
   useEffect(() => {
     if (product) {
+      // El formulario debe sincronizarse al cambiar de producto en el mismo modal.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: product.name || '',
         brand: product.brand || '',

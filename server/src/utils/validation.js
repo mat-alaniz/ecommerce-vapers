@@ -44,3 +44,30 @@ export const validatePrice = (data) => {
     price: parseInt(price)
   }
 }
+
+const PAYMENT_METHODS = ['efectivo', 'transferencia', 'mercado_pago']
+
+export const validatePayment = (data) => {
+  const amount = Number(data.amount_paid)
+  const paymentMethod = data.payment_method
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('El monto del pago debe ser mayor que cero')
+  }
+
+  if (!PAYMENT_METHODS.includes(paymentMethod)) {
+    throw new Error('Método de pago inválido')
+  }
+
+  return { amount, paymentMethod }
+}
+
+export const validatePaymentMethod = (data) => {
+  const paymentMethod = data.payment_method
+
+  if (!PAYMENT_METHODS.includes(paymentMethod)) {
+    throw new Error('Método de pago inválido')
+  }
+
+  return paymentMethod
+}

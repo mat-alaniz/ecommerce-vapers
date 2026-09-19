@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import AdminStats from '../components/Admin/AdminStats'
@@ -7,9 +7,11 @@ import ConfirmDeleteModal from '../components/AdminModals/ConfirmDeleteModal'
 import OrderDetailModal from '../components/AdminModals/OrderDetailModal'
 import StockEditModal from '../components/AdminModals/StockEditModal'
 import ProductFormModal from '../components/AdminModals/ProductFormModal'
+import PaymentModal from '../components/AdminModals/PaymentModal'
 import OrdersTable from '../components/AdminTables/OrdersTable'
 import UsersTable from '../components/AdminTables/UsersTable'
 import ProductsTable from '../components/AdminTables/ProductsTable'
+import PaymentsTable from '../components/AdminTables/PaymentsTable'
 import { adminFetch, clearStoredSession, getStoredProfile, getStoredToken } from '../utils/adminApi'
 
 const AdminDashboard = () => {
@@ -23,6 +25,7 @@ const AdminDashboard = () => {
   const [allOrders, setAllOrders] = useState([])
   const [users, setUsers] = useState([])
   const [products, setProducts] = useState([])
+  const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('panel')
   
@@ -45,17 +48,18 @@ const AdminDashboard = () => {
   const [orderDetail, setOrderDetail] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
 
-  // ✅ NUEVO: Estado para el modal de producto (crear/editar)
   const [productFormModal, setProductFormModal] = useState({
     isOpen: false,
-    product: null // null = crear, objeto = editar
+    product: null
   })
 
-  const handleUnauthorized = () => {
+  const [paymentModal, setPaymentModal] = useState({ isOpen: false, order: null })
+
+  const handleUnauthorized = useCallback(() => {
     clearStoredSession()
     toast.error('Tu sesión expiró. Iniciá sesión nuevamente.')
     navigate('/login', { replace: true })
-  }
+  }, [navigate])
 
   useEffect(() => {
     const token = getStoredToken()
@@ -72,36 +76,34 @@ const AdminDashboard = () => {
       return
     }
     
-    fetchAllData(token)
-  }, [navigate])
+    fetchAllData()
+  }, [navigate, fetchAllData])
 
-  const fetchAllData = async (token) => {
+  const fetchAllData = useCallback(async () => {
     try {
-      const [statsResult, ordersResult, usersResult, productsResult] = await Promise.all([
+      const results = await Promise.all([
         adminFetch('/admin/stats', {}, handleUnauthorized),
         adminFetch('/admin/orders', {}, handleUnauthorized),
         adminFetch('/admin/users', {}, handleUnauthorized),
-        adminFetch('/admin/products', {}, handleUnauthorized)
+        adminFetch('/admin/products', {}, handleUnauthorized),
+        adminFetch('/admin/payments', {}, handleUnauthorized)
       ])
 
-      const hasAuthError = [statsResult, ordersResult, usersResult, productsResult]
-        .some((result) => result.unauthorized)
+      if (results.some(result => result.unauthorized)) return
 
-      if (hasAuthError) {
-        return
-      }
-
+      const [statsResult, ordersResult, usersResult, productsResult, paymentsResult] = results
       if (statsResult.response.ok) setStats(statsResult.data)
       if (ordersResult.response.ok) setAllOrders(ordersResult.data)
       if (usersResult.response.ok) setUsers(usersResult.data)
       if (productsResult.response.ok) setProducts(productsResult.data)
+      if (paymentsResult.response.ok) setPayments(paymentsResult.data)
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al cargar datos')
     } finally {
       setLoading(false)
     }
-  }
+  }, [handleUnauthorized])
 
   const fetchOrderDetail = async (orderId) => {
     try {
@@ -110,11 +112,7 @@ const AdminDashboard = () => {
         {},
         handleUnauthorized
       )
-
-      if (unauthorized) {
-        return
-      }
-
+      if (unauthorized) return
       if (response.ok) {
         setOrderDetail(data)
         setShowDetailModal(true)
@@ -122,6 +120,7 @@ const AdminDashboard = () => {
         toast.error(data.error || 'Error al cargar detalle')
       }
     } catch (error) {
+      console.error('Error al cargar detalle:', error)
       toast.error('Error de conexión')
     }
   }
@@ -144,23 +143,18 @@ const AdminDashboard = () => {
   }
 
   const handleDeleteOrder = async (orderId) => {
-    const token = getStoredToken()
     try {
       const { response, data, unauthorized } = await adminFetch(
         `/admin/orders/${orderId}`,
         { method: 'DELETE' },
         handleUnauthorized
       )
-
-      if (unauthorized) {
-        return
-      }
-      
+      if (unauthorized) return
       if (response.ok) {
         toast.success('✅ Orden eliminada correctamente')
-        await fetchAllData(token)
+        await fetchAllData()
       } else {
-        toast.error(data?.error || 'Error al eliminar orden')
+        toast.error(data.error || 'Error al eliminar orden')
       }
     } catch (error) {
       console.error('Error al eliminar orden:', error)
@@ -169,35 +163,23 @@ const AdminDashboard = () => {
   }
 
   const handleDeleteUser = async (userId) => {
-    const token = getStoredToken()
     try {
       const { response, data, unauthorized } = await adminFetch(
         `/admin/users/${userId}`,
         { method: 'DELETE' },
         handleUnauthorized
       )
-
-      if (unauthorized) {
-        return
-      }
-      
+      if (unauthorized) return
       if (response.ok) {
         toast.success('✅ Usuario eliminado correctamente')
-        fetchAllData(token)
+        fetchAllData()
       } else {
-        toast.error(data?.error || 'Error al eliminar usuario')
+        toast.error(data.error || 'Error al eliminar usuario')
       }
     } catch (error) {
       console.error('Error al eliminar usuario:', error)
       toast.error('Error de conexión')
     }
-  }
-
-  const executeDelete = () => {
-    if (modal.onConfirm) {
-      modal.onConfirm(modal.itemId, modal.itemName)
-    }
-    closeModal()
   }
 
   // ========================
@@ -238,35 +220,21 @@ const AdminDashboard = () => {
     }
     
     try {
-      const { response, data, unauthorized } = await adminFetch(
-        `/admin/products/${product.id}/stock`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
+      const { response, data, unauthorized } = await adminFetch(`/admin/products/${product.id}/stock`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           stock_mobile: parseInt(stock_mobile),
           stock_warehouse: parseInt(stock_warehouse)
-          })
-        },
-        handleUnauthorized
-      )
+        })
+      }, handleUnauthorized)
 
-      if (unauthorized) {
-        return
-      }
+      if (unauthorized) return
 
       if (response.ok) {
         toast.success('✅ Stock actualizado correctamente')
         closeEditStockModal()
-
         const productsResult = await adminFetch('/admin/products', {}, handleUnauthorized)
-
-        if (productsResult.unauthorized) {
-          return
-        }
-
         if (productsResult.response.ok) setProducts(productsResult.data)
       } else {
         toast.error(data.error || 'Error al actualizar stock')
@@ -278,7 +246,7 @@ const AdminDashboard = () => {
   }
 
   // ========================
-  // PRODUCTOS (CRUD COMPLETO)
+  // PRODUCTOS
   // ========================
 
   const openCreateProductModal = () => {
@@ -312,32 +280,18 @@ const AdminDashboard = () => {
       
       const method = isEditing ? 'PUT' : 'POST'
       
-      const { response, data, unauthorized } = await adminFetch(
-        url,
-        {
-          method,
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        },
-        handleUnauthorized
-      )
+      const { response, data, unauthorized } = await adminFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      }, handleUnauthorized)
 
-      if (unauthorized) {
-        return
-      }
+      if (unauthorized) return
 
       if (response.ok) {
         toast.success(isEditing ? '✅ Producto actualizado' : '✅ Producto creado')
         closeProductFormModal()
-
         const productsResult = await adminFetch('/admin/products', {}, handleUnauthorized)
-
-        if (productsResult.unauthorized) {
-          return
-        }
-
         if (productsResult.response.ok) setProducts(productsResult.data)
       } else {
         toast.error(data.error || 'Error al guardar producto')
@@ -357,25 +311,73 @@ const AdminDashboard = () => {
         { method: 'DELETE' },
         handleUnauthorized
       )
-
-      if (unauthorized) {
-        return
-      }
-      
+      if (unauthorized) return
       if (response.ok) {
         toast.success('✅ Producto eliminado')
-
         const productsResult = await adminFetch('/admin/products', {}, handleUnauthorized)
-
-        if (productsResult.unauthorized) {
-          return
-        }
-
         if (productsResult.response.ok) setProducts(productsResult.data)
       } else {
-        toast.error(data?.error || 'Error al eliminar producto')
+        toast.error(data.error || 'Error al eliminar producto')
       }
     } catch (error) {
+      console.error('Error al eliminar producto:', error)
+      toast.error('Error de conexión')
+    }
+  }
+
+  // ========================
+  // PAGOS
+  // ========================
+
+  const openPaymentModal = (order) => {
+    setPaymentModal({ isOpen: true, order })
+  }
+
+  const closePaymentModal = () => {
+    setPaymentModal({ isOpen: false, order: null })
+  }
+
+  const handleRegisterPayment = async (orderId, amount, method) => {
+    try {
+      const { response, data, unauthorized } = await adminFetch(`/admin/payments/${orderId}/payment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_paid: amount, payment_method: method })
+      }, handleUnauthorized)
+
+      if (unauthorized) return
+      if (response.ok) {
+        toast.success('✅ Pago registrado')
+        closePaymentModal()
+        fetchAllData()
+      } else {
+        toast.error(data.error || 'Error al registrar pago')
+      }
+    } catch (error) {
+      console.error('Error al registrar pago:', error)
+      toast.error('Error de conexión')
+    }
+  }
+
+  const handleMarkAsPaid = async (orderId) => {
+    if (!confirm('¿Marcar esta orden como pagada completamente?')) return
+
+    try {
+      const { response, data, unauthorized } = await adminFetch(`/admin/payments/${orderId}/paid`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_method: 'efectivo' })
+      }, handleUnauthorized)
+
+      if (unauthorized) return
+      if (response.ok) {
+        toast.success('✅ Orden marcada como pagada')
+        fetchAllData()
+      } else {
+        toast.error(data.error || 'Error al marcar como pagada')
+      }
+    } catch (error) {
+      console.error('Error al marcar como pagada:', error)
       toast.error('Error de conexión')
     }
   }
@@ -388,7 +390,7 @@ const AdminDashboard = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Panel de Administración</h1>
       
-      <ConfirmDeleteModal modal={modal} onClose={closeModal} onConfirm={confirmDelete} />
+      <ConfirmDeleteModal modal={modal} onClose={closeModal} />
       <OrderDetailModal orderDetail={orderDetail} isOpen={showDetailModal} onClose={() => setShowDetailModal(false)} />
       <StockEditModal
         isOpen={editStockModal.isOpen}
@@ -399,12 +401,17 @@ const AdminDashboard = () => {
         onSave={handleSaveStock}
         onClose={closeEditStockModal}
       />
-      {/* ✅ NUEVO: Modal de producto */}
       <ProductFormModal
         isOpen={productFormModal.isOpen}
         product={productFormModal.product}
         onSave={handleSaveProduct}
         onClose={closeProductFormModal}
+      />
+      <PaymentModal
+        isOpen={paymentModal.isOpen}
+        order={paymentModal.order}
+        onSave={handleRegisterPayment}
+        onClose={closePaymentModal}
       />
 
       <AdminTabs
@@ -413,6 +420,7 @@ const AdminDashboard = () => {
         ordersCount={allOrders.length}
         usersCount={users.length}
         productsCount={products.length}
+        paymentsCount={payments.length}
       />
 
       {activeTab === 'panel' && <AdminStats stats={stats} />}
@@ -447,6 +455,17 @@ const AdminDashboard = () => {
             onEditStock={openEditStockModal}
             onEditProduct={openEditProductModal}
             onDeleteProduct={handleDeleteProduct}
+          />
+        </div>
+      )}
+
+      {activeTab === 'pagos' && (
+        <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">💰 Pagos pendientes</h2>
+          <PaymentsTable
+            payments={payments}
+            onRegisterPayment={openPaymentModal}
+            onMarkAsPaid={handleMarkAsPaid}
           />
         </div>
       )}

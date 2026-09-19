@@ -1,9 +1,10 @@
-const AdminTabs = ({ activeTab, onTabChange, ordersCount, usersCount, productsCount }) => {
+const AdminTabs = ({ activeTab, onTabChange, ordersCount, usersCount, productsCount, paymentsCount }) => {
   const tabs = [
     { id: 'panel', label: '📊 Panel' },
     { id: 'ordenes', label: `🛒 Órdenes (${ordersCount})` },
     { id: 'usuarios', label: `👥 Usuarios (${usersCount})` },
-    { id: 'stock', label: `📦 Stock (${productsCount})` }
+    { id: 'stock', label: `📦 Stock (${productsCount})` },
+    { id: 'pagos', label: `💰 Pagos (${paymentsCount})` }
   ]
 
   return (

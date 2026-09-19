@@ -38,7 +38,7 @@ const AdminRoute = ({ children }) => {
         }
 
         setIsAuthorized(false)
-      } catch (error) {
+      } catch {
         if (!isMounted) return
         setIsAuthorized(false)
       } finally {

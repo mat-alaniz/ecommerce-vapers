@@ -1,6 +1,4 @@
-import toast from 'react-hot-toast'
-
-const ConfirmDeleteModal = ({ modal, onClose, onConfirm }) => {
+const ConfirmDeleteModal = ({ modal, onClose }) => {
   const handleDelete = async () => {
     if (modal.onConfirm) {
       await modal.onConfirm(modal.itemId, modal.itemName)

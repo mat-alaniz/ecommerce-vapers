@@ -6,7 +6,43 @@ const router = Router()
 // Finalizar compra
 router.post('/', async (req, res) => {
   try {
-    const { items, userId, totalAmount } = req.body
+    const token = req.headers.authorization?.split(' ')[1]
+    if (!token) {
+      return res.status(401).json({ error: 'No autorizado' })
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+    if (userError) {
+      return res.status(401).json({ error: 'Sesión inválida' })
+    }
+
+    const { items } = req.body
+    const userId = user.id
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'El carrito no puede estar vacío' })
+    }
+
+    const productIds = items.map(item => item?.id)
+    const hasInvalidQuantity = items.some(item => (
+      !Number.isInteger(Number(item?.quantity)) || Number(item.quantity) <= 0
+    ))
+
+    if (productIds.some(id => !Number.isInteger(Number(id))) || hasInvalidQuantity) {
+      return res.status(400).json({ error: 'Los productos del carrito no son válidos' })
+    }
+
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id, price')
+      .in('id', productIds)
+
+    if (productsError) throw productsError
+
+    const productsById = new Map(products.map(product => [String(product.id), product]))
+    if (productsById.size !== new Set(productIds.map(String)).size) {
+      return res.status(400).json({ error: 'Uno o más productos ya no están disponibles' })
+    }
     
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -22,24 +58,27 @@ router.post('/', async (req, res) => {
     let orderItems = []
     
     for (const item of items) {
+      const product = productsById.get(String(item.id))
+      const quantity = Number(item.quantity)
+      const price = Number(product.price)
       let itemTotal = 0
       let itemDiscount = 0
-      for (let i = 1; i <= item.quantity; i++) {
+      for (let i = 1; i <= quantity; i++) {
         currentUnits++
         if (currentUnits % 6 === 0) {
-          itemTotal += item.price / 2
-          itemDiscount += item.price / 2
+          itemTotal += price / 2
+          itemDiscount += price / 2
         } else {
-          itemTotal += item.price
+          itemTotal += price
         }
       }
       totalWithDiscount += itemTotal
       discountApplied += itemDiscount
       orderItems.push({
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_price: item.price,
-        discount_per_unit: itemDiscount / item.quantity
+        product_id: product.id,
+        quantity,
+        unit_price: price,
+        discount_per_unit: itemDiscount / quantity
       })
     }
     
@@ -49,7 +88,10 @@ router.post('/', async (req, res) => {
         user_id: userId, 
         total_amount: totalWithDiscount, 
         discount_applied: discountApplied, 
-        status: 'completada' 
+        status: 'completada',
+        amount_paid: 0,
+        is_paid: false,
+        payment_method: null
       }])
       .select()
       .single()
@@ -57,7 +99,11 @@ router.post('/', async (req, res) => {
     if (orderError) throw orderError
     
     for (const item of orderItems) {
-      await supabase.from('order_items').insert([{ ...item, order_id: order.id }])
+      const { error: itemError } = await supabase
+        .from('order_items')
+        .insert([{ ...item, order_id: order.id }])
+
+      if (itemError) throw itemError
     }
     
     await supabase.from('profiles').update({ total_units_purchased: currentUnits }).eq('id', userId)

@@ -1,5 +1,3 @@
-import toast from 'react-hot-toast'
-
 const OrderDetailModal = ({ orderDetail, isOpen, onClose }) => {
   if (!isOpen || !orderDetail) return null
 

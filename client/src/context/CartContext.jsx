@@ -76,4 +76,6 @@ export const CartProvider = ({ children }) => {
   )
 }
 
+// Este archivo también expone el hook que consumen las páginas del carrito.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => useContext(CartContext)
