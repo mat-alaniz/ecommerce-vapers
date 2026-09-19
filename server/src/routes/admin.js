@@ -1,13 +1,7 @@
 import { Router } from 'express'
 import { verifyAdmin } from '../middleware/auth.js'
 import { handleError } from '../utils/errorHandler.js'
-import {
-  validateProduct,
-  validateStock,
-  validatePrice,
-  validatePayment,
-  validatePaymentMethod
-} from '../utils/validation.js'
+import { validateProduct, validateStock, validatePrice } from '../utils/validation.js'
 import * as statsService from '../services/statsService.js'
 import * as ordersService from '../services/ordersService.js'
 import * as usersService from '../services/usersService.js'
@@ -70,6 +64,15 @@ router.get('/users', verifyAdmin, async (req, res) => {
     res.json(users)
   } catch (err) {
     handleError(res, err, 'Error en /users')
+  }
+})
+
+router.get('/users/:id/orders', verifyAdmin, async (req, res) => {
+  try {
+    const orders = await usersService.getUserOrders(req.params.id)
+    res.json(orders)
+  } catch (err) {
+    handleError(res, err, 'Error al obtener órdenes del usuario')
   }
 })
 
@@ -162,26 +165,24 @@ router.get('/payments', verifyAdmin, async (req, res) => {
 
 router.put('/payments/:id/payment', verifyAdmin, async (req, res) => {
   try {
-    const { amount, paymentMethod } = validatePayment(req.body)
-    const result = await paymentsService.registerPayment(req.params.id, amount, paymentMethod)
+    const { amount_paid, payment_method } = req.body
+    const result = await paymentsService.registerPayment(
+      req.params.id,
+      parseInt(amount_paid),
+      payment_method
+    )
     res.json(result)
   } catch (err) {
-    if (err.message.includes('monto') || err.message.includes('Método')) {
-      return res.status(400).json({ error: err.message })
-    }
     handleError(res, err, 'Error al registrar pago')
   }
 })
 
 router.put('/payments/:id/paid', verifyAdmin, async (req, res) => {
   try {
-    const paymentMethod = validatePaymentMethod(req.body)
-    const result = await paymentsService.markAsPaid(req.params.id, paymentMethod)
+    const { payment_method } = req.body
+    const result = await paymentsService.markAsPaid(req.params.id, payment_method)
     res.json(result)
   } catch (err) {
-    if (err.message.includes('Método')) {
-      return res.status(400).json({ error: err.message })
-    }
     handleError(res, err, 'Error al marcar como pagada')
   }
 })
