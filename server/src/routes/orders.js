@@ -16,8 +16,12 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ error: 'Sesión inválida' })
     }
 
-    const { items } = req.body
+    const { items, stockType = 'mobile' } = req.body
     const userId = user.id
+
+    if (!['mobile', 'warehouse'].includes(stockType)) {
+      return res.status(400).json({ error: 'Modalidad de stock inválida' })
+    }
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'El carrito no puede estar vacío' })
@@ -78,9 +82,12 @@ router.post('/', async (req, res) => {
         product_id: product.id,
         quantity,
         unit_price: price,
-        discount_per_unit: itemDiscount / quantity
+        discount_per_unit: Number((itemDiscount / quantity).toFixed(2))
       })
     }
+
+    totalWithDiscount = Number(totalWithDiscount.toFixed(2))
+    discountApplied = Number(discountApplied.toFixed(2))
     
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -105,8 +112,33 @@ router.post('/', async (req, res) => {
 
       if (itemError) throw itemError
     }
+
+    const stockItems = items.map(item => ({
+      product_id: Number(item.id),
+      quantity: Number(item.quantity)
+    }))
+    const { error: stockError } = await supabase.rpc('decrement_products_stock', {
+      p_items: stockItems,
+      p_stock_type: stockType
+    })
+
+    if (stockError) {
+      await supabase.from('order_items').delete().eq('order_id', order.id)
+      await supabase.from('orders').delete().eq('id', order.id)
+
+      if (stockError.message?.includes('INSUFFICIENT_STOCK')) {
+        return res.status(409).json({ error: 'No hay stock suficiente para uno o más productos' })
+      }
+
+      throw stockError
+    }
     
-    await supabase.from('profiles').update({ total_units_purchased: currentUnits }).eq('id', userId)
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({ total_units_purchased: currentUnits })
+      .eq('id', userId)
+
+    if (profileUpdateError) throw profileUpdateError
     
     res.json({ 
       success: true, 

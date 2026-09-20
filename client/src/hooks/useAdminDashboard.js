@@ -99,6 +99,22 @@ const useAdminDashboard = () => {
     fetchAllData()
   }, [navigate, fetchAllData])
 
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') fetchAllData()
+    }
+    const refreshInterval = setInterval(refreshWhenVisible, 15000)
+
+    window.addEventListener('focus', refreshWhenVisible)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      clearInterval(refreshInterval)
+      window.removeEventListener('focus', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [fetchAllData])
+
   const fetchOrderDetail = async (orderId) => {
     try {
       const { response, data, unauthorized } = await adminFetch(
@@ -345,6 +361,7 @@ const useAdminDashboard = () => {
     paymentModal,
     userOrdersModal,
     setShowDetailModal,
+    fetchAllData,
     confirmDelete,
     closeModal,
     fetchOrderDetail,

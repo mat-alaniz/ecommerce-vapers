@@ -21,21 +21,64 @@ const RegisterPage = () => {
     })
   }
 
+  // 🆕 Validar y formatear el teléfono
+  const validateAndFormatPhone = (phone) => {
+    // Limpiar el número: quitar espacios, guiones, paréntesis, +54 9, etc.
+    let cleanPhone = phone.replace(/\D/g, '')
+
+    // Si el usuario ya puso 549 al principio, quitarlo
+    if (cleanPhone.startsWith('549')) {
+      cleanPhone = cleanPhone.slice(3)
+    }
+
+    // Si empieza con 0, quitarlo
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.slice(1)
+    }
+
+    // Validar que tenga entre 10 y 11 dígitos
+    if (cleanPhone.length < 10) {
+      toast.error('El teléfono debe tener al menos 10 dígitos')
+      return null
+    }
+
+    if (cleanPhone.length > 11) {
+      toast.error('El teléfono no puede tener más de 11 dígitos')
+      return null
+    }
+
+    // Validar que solo tenga números
+    if (!/^\d+$/.test(cleanPhone)) {
+      toast.error('El teléfono solo puede contener números')
+      return null
+    }
+
+    // Retornar con prefijo 549
+    return `549${cleanPhone}`
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast.error('Las contraseñas no coinciden')
       return
     }
-    
+
     if (formData.password.length < 6) {
       toast.error('La contraseña debe tener al menos 6 caracteres')
       return
     }
-    
+
+    // 🆕 Validar y formatear el teléfono
+    let phoneWithPrefix = null
+    if (formData.phone && formData.phone.trim() !== '') {
+      phoneWithPrefix = validateAndFormatPhone(formData.phone)
+      if (!phoneWithPrefix) return // La validación falló
+    }
+
     setLoading(true)
-    
+
     try {
       // 1. Registrar usuario
       const registerResponse = await fetch(buildApiUrl('/auth/register'), {
@@ -46,21 +89,21 @@ const RegisterPage = () => {
         body: JSON.stringify({
           full_name: formData.full_name,
           email: formData.email,
-          phone: formData.phone,
+          phone: phoneWithPrefix, // ← Enviar con prefijo
           password: formData.password
         })
       })
-      
+
       const registerData = await registerResponse.json()
-      
+
       if (!registerResponse.ok) {
         toast.error(registerData.error || 'Error al registrarse')
         setLoading(false)
         return
       }
-      
+
       toast.success('✅ Registro exitoso. Iniciando sesión...')
-      
+
       // 2. Iniciar sesión automáticamente
       const loginResponse = await fetch(buildApiUrl('/auth/login'), {
         method: 'POST',
@@ -72,24 +115,24 @@ const RegisterPage = () => {
           password: formData.password
         })
       })
-      
+
       const loginData = await loginResponse.json()
-      
+
       if (loginResponse.ok) {
         localStorage.setItem('token', loginData.session.access_token)
         localStorage.setItem('user', JSON.stringify(loginData.user))
         localStorage.setItem('profile', JSON.stringify(loginData.profile))
-        
+
         // 🔥 Disparar evento para actualizar el Navbar
         window.dispatchEvent(new Event('authChange'))
-        
+
         toast.success(`✨ ¡Bienvenido, ${loginData.profile.full_name}!`)
         navigate('/')
       } else {
         toast.error('Registro exitoso, pero no se pudo iniciar sesión automáticamente. Por favor, iniciá sesión manualmente.')
         navigate('/login')
       }
-      
+
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error de conexión con el servidor')
@@ -104,7 +147,7 @@ const RegisterPage = () => {
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
           Crear cuenta
         </h1>
-        
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-gray-700 font-medium mb-2">
@@ -120,7 +163,7 @@ const RegisterPage = () => {
               placeholder="Ej: Juan Pérez"
             />
           </div>
-          
+
           <div>
             <label className="block text-gray-700 font-medium mb-2">
               Email *
@@ -135,10 +178,10 @@ const RegisterPage = () => {
               placeholder="tu@email.com"
             />
           </div>
-          
+
           <div>
             <label className="block text-gray-700 font-medium mb-2">
-              Teléfono
+              Teléfono (celular)
             </label>
             <input
               type="tel"
@@ -146,10 +189,13 @@ const RegisterPage = () => {
               value={formData.phone}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="+54 9 11 1234-5678"
+              placeholder="1168011430"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Ingresá tu número sin el 0 ni el 15. Ej: 1168011430
+            </p>
           </div>
-          
+
           <div>
             <label className="block text-gray-700 font-medium mb-2">
               Contraseña *
@@ -164,7 +210,7 @@ const RegisterPage = () => {
               placeholder="Mínimo 6 caracteres"
             />
           </div>
-          
+
           <div>
             <label className="block text-gray-700 font-medium mb-2">
               Confirmar contraseña *
@@ -179,7 +225,7 @@ const RegisterPage = () => {
               placeholder="Repetí tu contraseña"
             />
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}
@@ -188,7 +234,7 @@ const RegisterPage = () => {
             {loading ? 'Registrando...' : 'Registrarme'}
           </button>
         </form>
-        
+
         <p className="text-center text-gray-600 mt-6">
           ¿Ya tenés cuenta?{' '}
           <Link to="/login" className="text-primary hover:underline">

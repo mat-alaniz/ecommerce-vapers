@@ -30,6 +30,7 @@ const AdminDashboard = () => {
     paymentModal,
     userOrdersModal,
     setShowDetailModal,
+    fetchAllData,
     confirmDelete,
     closeModal,
     fetchOrderDetail,
@@ -127,13 +128,19 @@ const AdminDashboard = () => {
 
       {activeTab === 'stock' && (
         <section className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center gap-2 flex-wrap mb-4">
             <h2 className="text-xl font-semibold text-gray-800">📦 Stock de productos</h2>
             <button
               onClick={openCreateProductModal}
               className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition"
             >
               + Agregar producto
+            </button>
+            <button
+              onClick={fetchAllData}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+            >
+              Actualizar stock
             </button>
           </div>
           <ProductsTable
