@@ -2,7 +2,7 @@ import { supabase } from '../config/supabase.js'
 
 // Obtener todas las órdenes impagas (pendientes de pago)
 export const getPendingPayments = async ({ from, to }) => {
-  const { data, error } = await supabase
+  const { data, count, error } = await supabase
     .from('orders')
     .select(`
       id,
