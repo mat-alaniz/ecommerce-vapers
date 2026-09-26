@@ -19,6 +19,29 @@ const ProductFormModal = ({ isOpen, product, onSave, onClose }) => {
   })
   const [uploading, setUploading] = useState(false)
 
+  const optimizeImage = async (file) => {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    const context = canvas.getContext('2d')
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+
+    const optimizedBlob = await new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob)
+        else reject(new Error('No se pudo optimizar la imagen'))
+      }, 'image/webp', 0.82)
+    })
+
+    return new File([optimizedBlob], `${file.name.replace(/\.[^.]+$/, '')}.webp`, {
+      type: 'image/webp',
+      lastModified: Date.now()
+    })
+  }
+
   useEffect(() => {
     if (product) {
       setFormData({
@@ -82,14 +105,15 @@ const ProductFormModal = ({ isOpen, product, onSave, onClose }) => {
 
     try {
       // Generar nombre único
-      const fileExt = file.name.split('.').pop()
+      const optimizedFile = await optimizeImage(file)
+      const fileExt = optimizedFile.name.split('.').pop()
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
       const filePath = `products/${fileName}`
 
       // Subir a Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file)
+        .upload(filePath, optimizedFile, { contentType: optimizedFile.type })
 
       if (uploadError) throw uploadError
 

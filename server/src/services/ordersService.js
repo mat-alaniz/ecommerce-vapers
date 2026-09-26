@@ -1,20 +1,28 @@
 import { supabase } from '../config/supabase.js'
 
-export const getAllOrders = async () => {
-  const { data, error } = await supabase
+export const getAllOrders = async ({ from, to }) => {
+  const { data, count, error } = await supabase
     .from('orders')
     .select(`
-      *,
+      id,
+      user_id,
+      total_amount,
+      discount_applied,
+      created_at,
       profiles(email)
-    `)
+    `, { count: 'exact' })
     .order('created_at', { ascending: false })
+    .range(from, to)
   
   if (error) throw error
   
-  return data.map(order => ({
-    ...order,
-    user_email: order.profiles?.email
-  }))
+  return {
+    data: data.map(order => ({
+      ...order,
+      user_email: order.profiles?.email
+    })),
+    total: count || 0
+  }
 }
 
 export const getOrderDetail = async (orderId) => {

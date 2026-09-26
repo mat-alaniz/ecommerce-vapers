@@ -78,7 +78,7 @@ const ProductDetailPage = () => {
         <div className="lg:w-1/2">
           <div className="bg-gray-100 rounded-2xl h-96 flex items-center justify-center">
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="h-full w-full object-cover rounded-2xl" />
+              <img src={product.image_url} alt={product.name} width="720" height="384" fetchPriority="high" decoding="async" className="h-full w-full object-cover rounded-2xl" />
             ) : (
               <span className="text-gray-400 text-lg">📦 Imagen de {product.name}</span>
             )}

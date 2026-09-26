@@ -23,130 +23,38 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Modalidad de stock inválida' })
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(items) || items.length === 0 || items.length > 100) {
       return res.status(400).json({ error: 'El carrito no puede estar vacío' })
     }
 
-    const productIds = items.map(item => item?.id)
     const hasInvalidQuantity = items.some(item => (
       !Number.isInteger(Number(item?.quantity)) || Number(item.quantity) <= 0
     ))
 
-    if (productIds.some(id => !Number.isInteger(Number(id))) || hasInvalidQuantity) {
+    if (items.some(item => !Number.isInteger(Number(item?.id)) || Number(item.id) <= 0) || hasInvalidQuantity) {
       return res.status(400).json({ error: 'Los productos del carrito no son válidos' })
     }
 
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('id, price')
-      .in('id', productIds)
-
-    if (productsError) throw productsError
-
-    const productsById = new Map(products.map(product => [String(product.id), product]))
-    if (productsById.size !== new Set(productIds.map(String)).size) {
-      return res.status(400).json({ error: 'Uno o más productos ya no están disponibles' })
-    }
-    
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('total_units_purchased')
-      .eq('id', userId)
-      .single()
-    
-    if (profileError) throw profileError
-    
-    let currentUnits = profile.total_units_purchased || 0
-    let totalWithDiscount = 0
-    let discountApplied = 0
-    let orderItems = []
-    
-    for (const item of items) {
-      const product = productsById.get(String(item.id))
-      const quantity = Number(item.quantity)
-      const price = Number(product.price)
-      let itemTotal = 0
-      let itemDiscount = 0
-      for (let i = 1; i <= quantity; i++) {
-        currentUnits++
-        if (currentUnits % 6 === 0) {
-          itemTotal += price / 2
-          itemDiscount += price / 2
-        } else {
-          itemTotal += price
-        }
-      }
-      totalWithDiscount += itemTotal
-      discountApplied += itemDiscount
-      orderItems.push({
-        product_id: product.id,
-        quantity,
-        unit_price: price,
-        discount_per_unit: Number((itemDiscount / quantity).toFixed(2))
-      })
-    }
-
-    totalWithDiscount = Number(totalWithDiscount.toFixed(2))
-    discountApplied = Number(discountApplied.toFixed(2))
-    
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert([{ 
-        user_id: userId, 
-        total_amount: totalWithDiscount, 
-        discount_applied: discountApplied, 
-        status: 'completada',
-        amount_paid: 0,
-        is_paid: false,
-        payment_method: null
-      }])
-      .select()
-      .single()
-    
-    if (orderError) throw orderError
-    
-    for (const item of orderItems) {
-      const { error: itemError } = await supabase
-        .from('order_items')
-        .insert([{ ...item, order_id: order.id }])
-
-      if (itemError) throw itemError
-    }
-
-    const stockItems = items.map(item => ({
-      product_id: Number(item.id),
-      quantity: Number(item.quantity)
-    }))
-    const { error: stockError } = await supabase.rpc('decrement_products_stock', {
-      p_items: stockItems,
+    const { data: orderResult, error: orderError } = await supabase.rpc('create_order', {
+      p_user_id: userId,
+      p_items: items.map(item => ({
+        product_id: Number(item.id),
+        quantity: Number(item.quantity)
+      })),
       p_stock_type: stockType
     })
 
-    if (stockError) {
-      await supabase.from('order_items').delete().eq('order_id', order.id)
-      await supabase.from('orders').delete().eq('id', order.id)
-
-      if (stockError.message?.includes('INSUFFICIENT_STOCK')) {
+    if (orderError) {
+      if (orderError.message?.includes('INSUFFICIENT_STOCK')) {
         return res.status(409).json({ error: 'No hay stock suficiente para uno o más productos' })
       }
-
-      throw stockError
+      if (orderError.message?.includes('PRODUCT_NOT_FOUND')) {
+        return res.status(400).json({ error: 'Uno o más productos ya no están disponibles' })
+      }
+      throw orderError
     }
-    
-    const { error: profileUpdateError } = await supabase
-      .from('profiles')
-      .update({ total_units_purchased: currentUnits })
-      .eq('id', userId)
 
-    if (profileUpdateError) throw profileUpdateError
-    
-    res.json({ 
-      success: true, 
-      orderId: order.id, 
-      total: totalWithDiscount, 
-      discount: discountApplied, 
-      totalUnits: currentUnits 
-    })
+    res.json(orderResult)
   } catch (err) {
     console.error('❌ Error al procesar orden:', err)
     res.status(500).json({ error: err.message })

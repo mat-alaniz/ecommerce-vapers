@@ -30,7 +30,7 @@ const ProductCard = ({ product }) => {
       <Link to={`/product/${product.id}`}>
         <div className="h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-80 transition">
           {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+            <img src={product.image_url} alt={product.name} width="400" height="192" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           ) : (
             <span className="text-gray-500">📦 {product.name}</span>
           )}

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { calculateDiscount } from '../utils/calculateDiscount'
 import { generateWhatsAppLink, generateAdminOrderMessage, ADMIN_WHATSAPP } from '../utils/whatsapp'
 import { buildApiUrl } from '../utils/api'
+import { invalidateProductsCache } from '../utils/productsCache'
 
 const CartPage = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart()
@@ -71,6 +72,7 @@ const CartPage = () => {
       const data = await response.json()
 
       if (response.ok) {
+        invalidateProductsCache()
         // Actualizar el perfil en localStorage con el nuevo contador
         const updatedProfile = { ...currentProfile, total_units_purchased: data.totalUnits }
         localStorage.setItem('profile', JSON.stringify(updatedProfile))

@@ -6,13 +6,18 @@ const router = Router()
 // Obtener todos los productos
 router.get('/', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('products')
-      .select('*')
+      .select('id, name, brand, flavor_es, price, stock_mobile, stock_warehouse, is_promo, image_url')
       .order('id')
+
+    if (req.query.promo === 'true') query = query.eq('is_promo', true)
+
+    const { data, error } = await query
 
     if (error) throw error
 
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
     res.json(data)
   } catch (err) {
     console.error('❌ Error en /api/products:', err)
@@ -43,6 +48,7 @@ router.get('/:id', async (req, res) => {
     if (!data) {
       return res.status(404).json({ error: 'Producto no encontrado' })
     }
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
     res.json(data)
   } catch (err) {
     console.error('❌ Error en /api/products/:id:', err)

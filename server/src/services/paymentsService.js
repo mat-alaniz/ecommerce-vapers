@@ -1,23 +1,30 @@
 import { supabase } from '../config/supabase.js'
 
 // Obtener todas las órdenes impagas (pendientes de pago)
-export const getPendingPayments = async () => {
+export const getPendingPayments = async ({ from, to }) => {
   const { data, error } = await supabase
     .from('orders')
     .select(`
-      *,
+      id,
+      total_amount,
+      amount_paid,
+      is_paid,
+      created_at,
       profiles(email, full_name, phone)
-    `)
+    `, { count: 'exact' })
     .eq('is_paid', false)
     .order('created_at', { ascending: false })
-  
+    .range(from, to)
   if (error) throw error
-  return data.map(order => ({
-    ...order,
-    user_email: order.profiles?.email,
-    user_name: order.profiles?.full_name,
-    user_phone: order.profiles?.phone
-  }))
+  return {
+    data: data.map(order => ({
+      ...order,
+      user_email: order.profiles?.email,
+      user_name: order.profiles?.full_name,
+      user_phone: order.profiles?.phone
+    })),
+    total: count || 0
+  }
 }
 
 // Registrar pago de una orden (total o parcial)

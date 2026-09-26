@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
-import { buildApiUrl } from '../utils/api'
+import { getProducts } from '../utils/productsCache'
 
 const HomePage = () => {
   const [products, setProducts] = useState([])
@@ -13,11 +13,7 @@ const HomePage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(buildApiUrl('/products'))
-        if (!response.ok) {
-          throw new Error('Error al cargar productos')
-        }
-        const data = await response.json()
+        const data = await getProducts()
         setProducts(data)
         setFilteredProducts(data)
       } catch (err) {

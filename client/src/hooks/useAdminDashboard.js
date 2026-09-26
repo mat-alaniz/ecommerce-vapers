@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminFetch, clearStoredSession, getStoredProfile, getStoredToken } from '../utils/adminApi'
+import { invalidateProductsCache } from '../utils/productsCache'
 
 const initialModal = {
   isOpen: false,
@@ -23,7 +24,7 @@ const initialProductModal = { isOpen: false, product: null }
 const initialPaymentModal = { isOpen: false, order: null }
 const initialUserOrdersModal = { isOpen: false, user: null, orders: [] }
 
-const useAdminDashboard = () => {
+const useAdminDashboard = (activeTab) => {
   const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -35,7 +36,10 @@ const useAdminDashboard = () => {
   const [users, setUsers] = useState([])
   const [products, setProducts] = useState([])
   const [payments, setPayments] = useState([])
+  const [counts, setCounts] = useState({ orders: 0, users: 0, products: 0, payments: 0 })
+  const [pages, setPages] = useState({ orders: 1, users: 1, stock: 1, pagos: 1 })
   const [loading, setLoading] = useState(true)
+  const [listLoading, setListLoading] = useState(false)
   const [modal, setModal] = useState(initialModal)
   const [editStockModal, setEditStockModal] = useState(initialStockModal)
   const [orderDetail, setOrderDetail] = useState(null)
@@ -50,36 +54,55 @@ const useAdminDashboard = () => {
     navigate('/login', { replace: true })
   }, [navigate])
 
-  const fetchAllData = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const results = await Promise.all([
-        adminFetch('/admin/stats', {}, handleUnauthorized),
-        adminFetch('/admin/orders', {}, handleUnauthorized),
-        adminFetch('/admin/users', {}, handleUnauthorized),
-        adminFetch('/admin/products', {}, handleUnauthorized),
-        adminFetch('/admin/payments', {}, handleUnauthorized)
-      ])
-
-      if (results.some(result => result.unauthorized)) return
-
-      const [statsResult, ordersResult, usersResult, productsResult, paymentsResult] = results
-      if (statsResult.response.ok) setStats(statsResult.data)
-      if (ordersResult.response.ok) setAllOrders(ordersResult.data)
-      if (usersResult.response.ok) setUsers(usersResult.data)
-      if (productsResult.response.ok) setProducts(productsResult.data)
-      if (paymentsResult.response.ok) setPayments(paymentsResult.data)
+      const result = await adminFetch('/admin/stats', {}, handleUnauthorized)
+      if (!result.unauthorized && result.response.ok) setStats(result.data)
     } catch (error) {
-      console.error('Error al cargar datos:', error)
-      toast.error('Error al cargar datos')
+      console.error('Error al cargar estadísticas:', error)
+      toast.error('Error al cargar estadísticas')
     } finally {
       setLoading(false)
     }
   }, [handleUnauthorized])
 
-  const fetchProducts = useCallback(async () => {
-    const result = await adminFetch('/admin/products', {}, handleUnauthorized)
-    if (!result.unauthorized && result.response.ok) setProducts(result.data)
+  const loadTabData = useCallback(async (tab, page = 1) => {
+    const config = {
+      ordenes: { key: 'orders', endpoint: '/admin/orders', setter: setAllOrders },
+      usuarios: { key: 'users', endpoint: '/admin/users', setter: setUsers },
+      stock: { key: 'products', endpoint: '/admin/products', setter: setProducts },
+      pagos: { key: 'payments', endpoint: '/admin/payments', setter: setPayments }
+    }[tab]
+
+    if (!config) return
+
+    setListLoading(true)
+    try {
+      const result = await adminFetch(`${config.endpoint}?page=${page}&limit=20`, {}, handleUnauthorized)
+      if (!result.unauthorized && result.response.ok) {
+        config.setter(result.data.data)
+        setCounts(previous => ({ ...previous, [config.key]: result.data.total }))
+        setPages(previous => ({ ...previous, [tab]: result.data.page }))
+      }
+    } catch (error) {
+      console.error(`Error al cargar ${tab}:`, error)
+      toast.error('Error al cargar la lista')
+    } finally {
+      setListLoading(false)
+    }
   }, [handleUnauthorized])
+
+  const fetchAllData = useCallback(async () => {
+    await Promise.all([
+      fetchStats(),
+      activeTab === 'panel' ? Promise.resolve() : loadTabData(activeTab, pages[activeTab])
+    ])
+  }, [activeTab, fetchStats, loadTabData, pages])
+
+  const changePage = (tab, page) => {
+    setPages(previous => ({ ...previous, [tab]: page }))
+    loadTabData(tab, page)
+  }
 
   useEffect(() => {
     const token = getStoredToken()
@@ -96,24 +119,16 @@ const useAdminDashboard = () => {
       return
     }
 
-    fetchAllData()
-  }, [navigate, fetchAllData])
+    fetchStats()
+  }, [navigate, fetchStats])
 
   useEffect(() => {
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') fetchAllData()
-    }
-    const refreshInterval = setInterval(refreshWhenVisible, 15000)
+    if (activeTab !== 'panel') loadTabData(activeTab, 1)
+  }, [activeTab, loadTabData])
 
-    window.addEventListener('focus', refreshWhenVisible)
-    document.addEventListener('visibilitychange', refreshWhenVisible)
-
-    return () => {
-      clearInterval(refreshInterval)
-      window.removeEventListener('focus', refreshWhenVisible)
-      document.removeEventListener('visibilitychange', refreshWhenVisible)
-    }
-  }, [fetchAllData])
+  const fetchProducts = useCallback(() => {
+    loadTabData('stock', pages.stock)
+  }, [loadTabData, pages.stock])
 
   const fetchOrderDetail = async (orderId) => {
     try {
@@ -220,6 +235,7 @@ const useAdminDashboard = () => {
       if (unauthorized) return
       if (response.ok) {
         toast.success('✅ Stock actualizado correctamente')
+        invalidateProductsCache()
         closeEditStockModal()
         await fetchProducts()
       } else {
@@ -248,6 +264,7 @@ const useAdminDashboard = () => {
       if (unauthorized) return
       if (response.ok) {
         toast.success(isEditing ? '✅ Producto actualizado' : '✅ Producto creado')
+        invalidateProductsCache()
         closeProductFormModal()
         await fetchProducts()
       } else {
@@ -269,6 +286,7 @@ const useAdminDashboard = () => {
       if (unauthorized) return
       if (response.ok) {
         toast.success('✅ Producto eliminado')
+        invalidateProductsCache()
         await fetchProducts()
       } else {
         toast.error(data.error || 'Error al eliminar producto')
@@ -352,7 +370,10 @@ const useAdminDashboard = () => {
     users,
     products,
     payments,
+    counts,
+    pages,
     loading,
+    listLoading,
     modal,
     editStockModal,
     orderDetail,
@@ -362,6 +383,7 @@ const useAdminDashboard = () => {
     userOrdersModal,
     setShowDetailModal,
     fetchAllData,
+    changePage,
     confirmDelete,
     closeModal,
     fetchOrderDetail,

@@ -12,15 +12,16 @@ const normalizeProductId = (productId) => {
   return parsedId
 }
 
-export const getAllProducts = async () => {
-  const { data, error } = await supabase
+export const getAllProducts = async ({ from, to }) => {
+  const { data, count, error } = await supabase
     .from('products')
-    .select('*')
+    .select('id, name, brand, flavor_es, price, stock_mobile, stock_warehouse, is_promo, description, nicotine, puffs, battery, image_url', { count: 'exact' })
     .order('id')
+    .range(from, to)
   
   if (error) throw error
   
-  return data
+  return { data, total: count || 0 }
 }
 
 export const createProduct = async (productData) => {

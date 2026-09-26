@@ -7,8 +7,13 @@ import * as ordersService from '../services/ordersService.js'
 import * as usersService from '../services/usersService.js'
 import * as productsService from '../services/productsService.js'
 import * as paymentsService from '../services/paymentsService.js'
+import { parsePagination, paginatedResponse } from '../utils/pagination.js'
 
 const router = Router()
+
+router.get('/verify', verifyAdmin, (req, res) => {
+  res.json({ authorized: true })
+})
 
 // ========================
 // ESTADÍSTICAS
@@ -29,8 +34,9 @@ router.get('/stats', verifyAdmin, async (req, res) => {
 
 router.get('/orders', verifyAdmin, async (req, res) => {
   try {
-    const orders = await ordersService.getAllOrders()
-    res.json(orders)
+    const pagination = parsePagination(req.query)
+    const result = await ordersService.getAllOrders(pagination)
+    res.json(paginatedResponse(result.data, pagination, result.total))
   } catch (err) {
     handleError(res, err, 'Error en /orders')
   }
@@ -60,8 +66,9 @@ router.delete('/orders/:id', verifyAdmin, async (req, res) => {
 
 router.get('/users', verifyAdmin, async (req, res) => {
   try {
-    const users = await usersService.getAllUsers()
-    res.json(users)
+    const pagination = parsePagination(req.query)
+    const result = await usersService.getAllUsers(pagination)
+    res.json(paginatedResponse(result.data, pagination, result.total))
   } catch (err) {
     handleError(res, err, 'Error en /users')
   }
@@ -91,8 +98,9 @@ router.delete('/users/:id', verifyAdmin, async (req, res) => {
 
 router.get('/products', verifyAdmin, async (req, res) => {
   try {
-    const products = await productsService.getAllProducts()
-    res.json(products)
+    const pagination = parsePagination(req.query)
+    const result = await productsService.getAllProducts(pagination)
+    res.json(paginatedResponse(result.data, pagination, result.total))
   } catch (err) {
     handleError(res, err, 'Error en /products')
   }
@@ -156,8 +164,9 @@ router.delete('/products/:id', verifyAdmin, async (req, res) => {
 
 router.get('/payments', verifyAdmin, async (req, res) => {
   try {
-    const payments = await paymentsService.getPendingPayments()
-    res.json(payments)
+    const pagination = parsePagination(req.query)
+    const result = await paymentsService.getPendingPayments(pagination)
+    res.json(paginatedResponse(result.data, pagination, result.total))
   } catch (err) {
     handleError(res, err, 'Error al obtener pagos pendientes')
   }

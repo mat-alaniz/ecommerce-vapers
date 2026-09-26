@@ -11,6 +11,7 @@ import OrdersTable from '../components/AdminTables/OrdersTable'
 import UsersTable from '../components/AdminTables/UsersTable'
 import ProductsTable from '../components/AdminTables/ProductsTable'
 import PaymentsTable from '../components/AdminTables/PaymentsTable'
+import Pagination from '../components/AdminTables/Pagination'
 import useAdminDashboard from '../hooks/useAdminDashboard'
 
 const AdminDashboard = () => {
@@ -21,6 +22,7 @@ const AdminDashboard = () => {
     users,
     products,
     payments,
+    listLoading,
     loading,
     modal,
     editStockModal,
@@ -48,8 +50,11 @@ const AdminDashboard = () => {
     handleRegisterPayment,
     handleMarkAsPaid,
     openUserOrdersModal,
-    closeUserOrdersModal
-  } = useAdminDashboard()
+    closeUserOrdersModal,
+    counts,
+    pages,
+    changePage
+  } = useAdminDashboard(activeTab)
 
   if (loading) {
     return <div className="container mx-auto px-4 py-16 text-center">Cargando panel...</div>
@@ -96,10 +101,10 @@ const AdminDashboard = () => {
       <AdminTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        ordersCount={allOrders.length}
-        usersCount={users.length}
-        productsCount={products.length}
-        paymentsCount={payments.length}
+        ordersCount={counts.orders}
+        usersCount={counts.users}
+        productsCount={counts.products}
+        paymentsCount={counts.payments}
       />
 
       {activeTab === 'panel' && <AdminStats stats={stats} />}
@@ -107,27 +112,32 @@ const AdminDashboard = () => {
       {activeTab === 'ordenes' && (
         <section className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">📋 Órdenes</h2>
+          {listLoading && <p className="mb-3 text-sm text-gray-500" role="status">Actualizando...</p>}
           <OrdersTable
             orders={allOrders}
             onViewDetail={fetchOrderDetail}
             onDelete={confirmDelete}
           />
+          <Pagination page={pages.ordenes} pageSize={20} total={counts.orders} onPageChange={page => changePage('ordenes', page)} />
         </section>
       )}
 
       {activeTab === 'usuarios' && (
         <section className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">👥 Usuarios</h2>
+          {listLoading && <p className="mb-3 text-sm text-gray-500" role="status">Actualizando...</p>}
           <UsersTable
             users={users}
             onDelete={confirmDelete}
             onViewOrders={openUserOrdersModal}
           />
+          <Pagination page={pages.usuarios} pageSize={20} total={counts.users} onPageChange={page => changePage('usuarios', page)} />
         </section>
       )}
 
       {activeTab === 'stock' && (
         <section className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
+          {listLoading && <p className="mb-3 text-sm text-gray-500" role="status">Actualizando...</p>}
           <div className="flex justify-between items-center gap-2 flex-wrap mb-4">
             <h2 className="text-xl font-semibold text-gray-800">📦 Stock de productos</h2>
             <button
@@ -149,17 +159,20 @@ const AdminDashboard = () => {
             onEditProduct={openEditProductModal}
             onDeleteProduct={handleDeleteProduct}
           />
+          <Pagination page={pages.stock} pageSize={20} total={counts.products} onPageChange={page => changePage('stock', page)} />
         </section>
       )}
 
       {activeTab === 'pagos' && (
         <section className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">💰 Pagos pendientes</h2>
+          {listLoading && <p className="mb-3 text-sm text-gray-500" role="status">Actualizando...</p>}
           <PaymentsTable
             payments={payments}
             onRegisterPayment={openPaymentModal}
             onMarkAsPaid={handleMarkAsPaid}
           />
+          <Pagination page={pages.pagos} pageSize={20} total={counts.payments} onPageChange={page => changePage('pagos', page)} />
         </section>
       )}
     </div>

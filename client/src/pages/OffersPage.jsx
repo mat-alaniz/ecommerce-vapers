@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import ProductCard from '../components/ProductCard'
-import { buildApiUrl } from '../utils/api'
+import { getProducts } from '../utils/productsCache'
 
 const OffersPage = () => {
   const [products, setProducts] = useState([])
@@ -9,9 +9,8 @@ const OffersPage = () => {
   useEffect(() => {
     const fetchPromoProducts = async () => {
       try {
-        const response = await fetch(buildApiUrl('/products'))
-        const data = await response.json()
-        setProducts(data.filter((product) => product.is_promo))
+        const data = await getProducts({ promoOnly: true })
+        setProducts(data)
       } catch (error) {
         console.error('Error:', error)
       } finally {

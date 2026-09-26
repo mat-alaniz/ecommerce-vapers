@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
-import { buildApiUrl } from '../utils/api'
+import { getProducts } from '../utils/productsCache'
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([])
@@ -12,8 +12,7 @@ const ProductsPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(buildApiUrl('/products'))
-        const data = await response.json()
+        const data = await getProducts()
         setProducts(data)
         setFilteredProducts(data)
       } catch (error) {

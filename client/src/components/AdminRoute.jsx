@@ -20,7 +20,7 @@ const AdminRoute = ({ children }) => {
 
     const verifySession = async () => {
       try {
-        const { response, unauthorized } = await adminFetch('/admin/stats', {}, () => {
+        const { response, unauthorized } = await adminFetch('/admin/verify', {}, () => {
           clearStoredSession()
           toast.error('Tu sesión de administrador expiró. Iniciá sesión de nuevo.')
         })

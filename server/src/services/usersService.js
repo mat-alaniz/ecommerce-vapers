@@ -1,36 +1,27 @@
 import { supabase } from '../config/supabase.js'
 
-export const getAllUsers = async () => {
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (profilesError) throw profilesError
-
-  // Obtener todas las órdenes para calcular totales por usuario
-  const { data: orders, error: ordersError } = await supabase
-    .from('orders')
-    .select('user_id, total_amount, amount_paid')
-
-  if (ordersError) throw ordersError
-
-  // Calcular totales por usuario
-  const userTotals = {}
-  orders.forEach(order => {
-    if (!userTotals[order.user_id]) {
-      userTotals[order.user_id] = { total_spent: 0, total_paid: 0 }
-    }
-    userTotals[order.user_id].total_spent += order.total_amount
-    userTotals[order.user_id].total_paid += (order.amount_paid || 0)
+export const getAllUsers = async ({ page, pageSize }) => {
+  const { data: profiles, error } = await supabase.rpc('admin_users_page', {
+    p_page: page,
+    p_page_size: pageSize
   })
 
-  return profiles.map(user => ({
-    ...user,
-    total_spent: userTotals[user.id]?.total_spent || 0,
-    total_paid: userTotals[user.id]?.total_paid || 0,
-    pending_debt: (userTotals[user.id]?.total_spent || 0) - (userTotals[user.id]?.total_paid || 0)
-  }))
+  if (error) throw error
+
+  return {
+    data: profiles.filter(user => user.id).map(user => {
+      const totalSpent = Number(user.total_spent || 0)
+      const totalPaid = Number(user.total_paid || 0)
+
+      return {
+        ...user,
+        total_spent: totalSpent,
+        total_paid: totalPaid,
+        pending_debt: totalSpent - totalPaid
+      }
+    }),
+    total: Number(profiles[0]?.total_count || 0)
+  }
 }
 
 export const deleteUser = async (id) => {
