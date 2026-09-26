@@ -1,6 +1,9 @@
 import { Router } from 'express'
+import multer from 'multer'
+import { randomUUID } from 'crypto'
 import { verifyAdmin } from '../middleware/auth.js'
 import { handleError } from '../utils/errorHandler.js'
+import { supabase } from '../config/supabase.js'
 import { validateProduct, validateStock, validatePrice } from '../utils/validation.js'
 import * as statsService from '../services/statsService.js'
 import * as ordersService from '../services/ordersService.js'
@@ -10,9 +13,74 @@ import * as paymentsService from '../services/paymentsService.js'
 import { parsePagination, paginatedResponse } from '../utils/pagination.js'
 
 const router = Router()
+const productImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }
+}).single('image')
+
+const parseProductImage = (req, res, next) => {
+  productImageUpload(req, res, error => {
+    if (!error) return next()
+    const statusCode = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400
+    return res.status(statusCode).json({ error: 'La imagen debe ser válida y no superar 5 MB' })
+  })
+}
 
 router.get('/verify', verifyAdmin, (req, res) => {
   res.json({ authorized: true })
+})
+
+router.post('/product-images', verifyAdmin, parseProductImage, async (req, res) => {
+  try {
+    const allowedTypes = new Set(['image/webp', 'image/jpeg', 'image/png'])
+    if (!req.file || !allowedTypes.has(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Formato de imagen no permitido' })
+    }
+
+    const extension = req.file.mimetype === 'image/webp'
+      ? 'webp'
+      : req.file.mimetype === 'image/png' ? 'png' : 'jpg'
+    const filePath = `products/${randomUUID()}.${extension}`
+    const { error } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, req.file.buffer, { contentType: req.file.mimetype })
+
+    if (error) throw error
+
+    const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
+    res.status(201).json({ imageUrl: data.publicUrl })
+  } catch (err) {
+    handleError(res, err, 'Error al subir imagen de producto')
+  }
+})
+
+router.delete('/product-images', verifyAdmin, async (req, res) => {
+  try {
+    const imageUrl = new URL(req.body.image_url)
+    const supabaseOrigin = new URL(process.env.SUPABASE_URL).origin
+    const publicPath = '/storage/v1/object/public/product-images/'
+
+    if (imageUrl.origin !== supabaseOrigin || !imageUrl.pathname.includes(publicPath)) {
+      return res.status(400).json({ error: 'URL de imagen inválida' })
+    }
+
+    const filePath = decodeURIComponent(imageUrl.pathname.split(publicPath)[1])
+    if (!filePath.startsWith('products/') || filePath.split('/').includes('..')) {
+      return res.status(400).json({ error: 'Ruta de imagen inválida' })
+    }
+
+    const { error } = await supabase.storage
+      .from('product-images')
+      .remove([filePath])
+
+    if (error) throw error
+    res.json({ success: true })
+  } catch (err) {
+    if (err instanceof TypeError) {
+      return res.status(400).json({ error: 'URL de imagen inválida' })
+    }
+    handleError(res, err, 'Error al eliminar imagen de producto')
+  }
 })
 
 // ========================

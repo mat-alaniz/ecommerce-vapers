@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { supabase } from '../../config/supabaseClient'
+import { adminFetch } from '../../utils/adminApi'
 
 const ProductFormModal = ({ isOpen, product, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -104,27 +104,20 @@ const ProductFormModal = ({ isOpen, product, onSave, onClose }) => {
     setUploading(true)
 
     try {
-      // Generar nombre único
       const optimizedFile = await optimizeImage(file)
-      const fileExt = optimizedFile.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-      const filePath = `products/${fileName}`
+      const body = new FormData()
+      body.append('image', optimizedFile)
+      const { response, data, unauthorized } = await adminFetch('/admin/product-images', {
+        method: 'POST',
+        body
+      })
 
-      // Subir a Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, optimizedFile, { contentType: optimizedFile.type })
-
-      if (uploadError) throw uploadError
-
-      // Obtener URL pública
-      const { data: urlData } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath)
+      if (unauthorized) return
+      if (!response.ok) throw new Error(data?.error || 'Error al subir la imagen')
 
       setFormData(prev => ({
         ...prev,
-        image_url: urlData.publicUrl
+        image_url: data.imageUrl
       }))
 
       toast.success('✅ Imagen subida correctamente')
@@ -140,18 +133,15 @@ const ProductFormModal = ({ isOpen, product, onSave, onClose }) => {
   const handleRemoveImage = async () => {
     if (!formData.image_url) return
 
-    // Extraer el path de la URL
-    const urlParts = formData.image_url.split('/product-images/')
-    if (urlParts.length < 2) return
-
-    const filePath = urlParts[1]
-
     try {
-      const { error } = await supabase.storage
-        .from('product-images')
-        .remove([filePath])
+      const { response, data, unauthorized } = await adminFetch('/admin/product-images', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: formData.image_url })
+      })
 
-      if (error) throw error
+      if (unauthorized) return
+      if (!response.ok) throw new Error(data?.error || 'Error al eliminar la imagen')
 
       setFormData(prev => ({ ...prev, image_url: '' }))
       toast.success('Imagen eliminada')

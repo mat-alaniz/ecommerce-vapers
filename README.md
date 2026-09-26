@@ -1,6 +1,6 @@
 # ecommerce-vapers
 Ecommerce de vapers descartables con React, Node.js, Express y Supabase. Incluye panel de admin, descuento acumulativo (50% OFF en 6ta unidad), carrito persistente y diseño responsive.
 
-## Migración de rendimiento
+## Migraciones
 
-Antes de desplegar esta versión, ejecutá `server/supabase/migrations/007_query_performance_and_checkout.sql` en el SQL Editor de Supabase. Agrega índices, funciones para estadísticas y usuarios paginados, y el checkout transaccional que usa el backend.
+Antes de desplegar esta versión, ejecutá en orden `server/supabase/migrations/007_query_performance_and_checkout.sql` y `server/supabase/migrations/008_secure_product_image_writes.sql` en el SQL Editor de Supabase. La primera agrega índices, funciones para estadísticas y usuarios paginados, y el checkout transaccional. La segunda elimina las escrituras públicas al bucket de imágenes; las cargas y eliminaciones se hacen mediante rutas admin autenticadas del backend.
