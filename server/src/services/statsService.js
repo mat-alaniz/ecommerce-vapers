@@ -1,14 +1,22 @@
 import { supabase } from '../config/supabase.js'
 
 export const getStats = async () => {
-  const { data, error } = await supabase.rpc('admin_dashboard_stats').single()
+  const [statsResult, productsResult, pendingPaymentsResult] = await Promise.all([
+    supabase.rpc('admin_dashboard_stats').single(),
+    supabase.from('products').select('id', { count: 'exact', head: true }),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('is_paid', false)
+  ])
 
-  if (error) throw error
+  if (statsResult.error) throw statsResult.error
+  if (productsResult.error) throw productsResult.error
+  if (pendingPaymentsResult.error) throw pendingPaymentsResult.error
 
   return {
-    totalUsers: Number(data.total_users),
-    totalOrders: Number(data.total_orders),
-    totalRevenue: Number(data.total_revenue),
-    totalUnitsSold: Number(data.total_units_sold)
+    totalUsers: Number(statsResult.data.total_users),
+    totalOrders: Number(statsResult.data.total_orders),
+    totalRevenue: Number(statsResult.data.total_revenue),
+    totalUnitsSold: Number(statsResult.data.total_units_sold),
+    totalProducts: productsResult.count || 0,
+    pendingPayments: pendingPaymentsResult.count || 0
   }
 }

@@ -57,7 +57,15 @@ const useAdminDashboard = (activeTab) => {
   const fetchStats = useCallback(async () => {
     try {
       const result = await adminFetch('/admin/stats', {}, handleUnauthorized)
-      if (!result.unauthorized && result.response.ok) setStats(result.data)
+      if (!result.unauthorized && result.response.ok) {
+        setStats(result.data)
+        setCounts({
+          orders: result.data.totalOrders,
+          users: result.data.totalUsers,
+          products: result.data.totalProducts,
+          payments: result.data.pendingPayments
+        })
+      }
     } catch (error) {
       console.error('Error al cargar estadísticas:', error)
       toast.error('Error al cargar estadísticas')
