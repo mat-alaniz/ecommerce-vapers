@@ -13,6 +13,7 @@ const ProductsTable = ({ products, onEditStock, onEditProduct, onDeleteProduct }
               <th className="px-4 py-2 text-left">ID</th>
               <th className="px-4 py-2 text-left">Producto</th>
               <th className="px-4 py-2 text-left">Marca</th>
+              <th className="px-4 py-2 text-left">Sabor</th>
               <th className="px-4 py-2 text-center">Stock móvil</th>
               <th className="px-4 py-2 text-center">Stock depósito</th>
               <th className="px-4 py-2 text-right">Precio</th>
@@ -26,6 +27,7 @@ const ProductsTable = ({ products, onEditStock, onEditProduct, onDeleteProduct }
                 <td className="px-4 py-2">#{product.id}</td>
                 <td className="px-4 py-2 font-medium">{product.name}</td>
                 <td className="px-4 py-2">{product.brand}</td>
+                <td className="px-4 py-2">{product.flavor_es}</td>
                 <td className="px-4 py-2 text-center">
                   <span className={`px-2 py-1 rounded-full text-xs ${
                     product.stock_mobile > 0 
@@ -88,7 +90,8 @@ const ProductsTable = ({ products, onEditStock, onEditProduct, onDeleteProduct }
               <p className="font-semibold text-gray-800">{product.name}</p>
               <span className="text-xs text-gray-500">#{product.id}</span>
             </div>
-            <p className="text-sm text-gray-600 mb-2">Marca: {product.brand}</p>
+            <p className="text-sm text-gray-600">Marca: {product.brand}</p>
+            <p className="text-sm text-gray-600 mb-2">Sabor: {product.flavor_es}</p>
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div className="bg-green-50 rounded-lg p-2 text-center">
                 <p className="text-xs text-gray-500">Móvil</p>

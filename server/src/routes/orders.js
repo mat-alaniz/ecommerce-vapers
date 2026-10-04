@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { supabase } from '../config/supabase.js'
+import { supabase, supabaseAuth } from '../config/supabase.js'
 
 const router = Router()
 
@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ error: 'No autorizado' })
     }
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token)
     if (userError) {
       return res.status(401).json({ error: 'Sesión inválida' })
     }
@@ -69,7 +69,7 @@ router.get('/history', async (req, res) => {
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token)
     if (userError) throw userError
     
     const { data: orders, error: ordersError } = await supabase

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
+import { sortProductsByStock } from '../utils/productSort'
 import { getProducts } from '../utils/productsCache'
 
 const OffersPage = () => {
@@ -10,14 +11,14 @@ const OffersPage = () => {
     const fetchPromoProducts = async () => {
       try {
         const data = await getProducts({ promoOnly: true })
-        setProducts(data)
+        // 🆕 Ordenar: primero los que tienen stock, al final los agotados
+        setProducts(sortProductsByStock(data))
       } catch (error) {
         console.error('Error:', error)
       } finally {
         setLoading(false)
       }
     }
-
     fetchPromoProducts()
   }, [])
 

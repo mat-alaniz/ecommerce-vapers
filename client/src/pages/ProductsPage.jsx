@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
+import { sortProductsByStock } from '../utils/productSort'
 import { getProducts } from '../utils/productsCache'
 
 const ProductsPage = () => {
@@ -24,7 +25,7 @@ const ProductsPage = () => {
     fetchProducts()
   }, [])
 
-  // Filtrar
+  // Filtrar y ordenar
   useEffect(() => {
     let filtered = products
     if (selectedBrand !== 'all') {
@@ -36,7 +37,8 @@ const ProductsPage = () => {
         p.flavor_es.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
-    setFilteredProducts(filtered)
+    // 🆕 Ordenar: primero los que tienen stock, al final los agotados
+    setFilteredProducts(sortProductsByStock(filtered))
   }, [selectedBrand, searchTerm, products])
 
   const brands = ['all', ...new Set(products.map(p => p.brand))]

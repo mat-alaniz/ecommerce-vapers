@@ -40,6 +40,8 @@ const LoginPage = () => {
         
         if (token) {
           localStorage.setItem('token', token)
+          localStorage.setItem('refresh_token', data.session.refresh_token)
+          localStorage.setItem('expires_at', String(data.session.expires_at || ''))
           localStorage.setItem('user', JSON.stringify(user))
           localStorage.setItem('profile', JSON.stringify(profile))
           

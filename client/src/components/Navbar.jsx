@@ -51,6 +51,8 @@ const Navbar = () => {
     }
     
     localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('expires_at')
     localStorage.removeItem('user')
     localStorage.removeItem('profile')
     setUser(null)

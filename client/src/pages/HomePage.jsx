@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
+import { sortProductsByStock } from '../utils/productSort'
 import { getProducts } from '../utils/productsCache'
 
 const HomePage = () => {
@@ -9,7 +10,6 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Cargar productos desde el backend
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -25,13 +25,13 @@ const HomePage = () => {
     fetchProducts()
   }, [])
 
-  // Filtrar por marca
   useEffect(() => {
-    if (selectedBrand === 'all') {
-      setFilteredProducts(products)
-    } else {
-      setFilteredProducts(products.filter(p => p.brand === selectedBrand))
+    let filtered = products
+    if (selectedBrand !== 'all') {
+      filtered = filtered.filter(p => p.brand === selectedBrand)
     }
+    // 🆕 Ordenar: primero los que tienen stock, al final los agotados
+    setFilteredProducts(sortProductsByStock(filtered))
   }, [selectedBrand, products])
 
   const brands = ['all', ...new Set(products.map(p => p.brand))]

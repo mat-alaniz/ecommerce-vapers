@@ -10,7 +10,8 @@ export const validateProduct = (data) => {
     description,
     nicotine,
     puffs,
-    battery
+    battery,
+    image_url
   } = data
 
   return {
@@ -24,7 +25,8 @@ export const validateProduct = (data) => {
     description: description || null,
     nicotine: nicotine || null,
     puffs: puffs || null,
-    battery: battery || null
+    battery: battery || null,
+    image_url: image_url || null
   }
 }
 

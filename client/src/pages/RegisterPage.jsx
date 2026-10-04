@@ -120,6 +120,8 @@ const RegisterPage = () => {
 
       if (loginResponse.ok) {
         localStorage.setItem('token', loginData.session.access_token)
+        localStorage.setItem('refresh_token', loginData.session.refresh_token)
+        localStorage.setItem('expires_at', String(loginData.session.expires_at || ''))
         localStorage.setItem('user', JSON.stringify(loginData.user))
         localStorage.setItem('profile', JSON.stringify(loginData.profile))
 

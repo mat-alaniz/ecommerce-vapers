@@ -1,10 +1,10 @@
-import { supabase } from '../config/supabase.js'
+import { supabase, supabaseAuth } from '../config/supabase.js'
 
 export const verifyAdmin = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1]
   if (!token) return res.status(401).json({ error: 'No autorizado' })
   
-  const { data: { user }, error } = await supabase.auth.getUser(token)
+  const { data: { user }, error } = await supabaseAuth.auth.getUser(token)
   if (error) return res.status(401).json({ error: error.message })
   
   const { data: profile } = await supabase

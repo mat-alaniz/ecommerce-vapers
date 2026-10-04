@@ -20,7 +20,6 @@ const ProductCard = ({ product }) => {
     })
   }
 
-  // Calcular stock total para mostrar disponibilidad
   const hasStock = product.stock_mobile > 0 || product.stock_warehouse > 0
 
   return (
@@ -28,11 +27,24 @@ const ProductCard = ({ product }) => {
       
       {/* Imagen del producto - CLICKEABLE */}
       <Link to={`/product/${product.id}`}>
-        <div className="h-48 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-80 transition">
+        <div className="relative h-48 overflow-hidden bg-gray-100">
+          {product.image_url && (
+            <img
+              src={product.image_url}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover blur-sm scale-110"
+            />
+          )}
           {product.image_url ? (
-            <img src={product.image_url} alt={product.name} width="400" height="192" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="relative w-full h-full object-contain"
+            />
           ) : (
-            <span className="text-gray-500">📦 {product.name}</span>
+            <div className="flex items-center justify-center h-full">
+              <span className="text-gray-500">📦 {product.name}</span>
+            </div>
           )}
         </div>
       </Link>
@@ -40,17 +52,21 @@ const ProductCard = ({ product }) => {
       {/* Contenido de la tarjeta */}
       <div className="p-5">
         
-        {/* Marca y nombre */}
-        <div className="mb-2">
-          <span className="text-sm font-semibold text-primary bg-emerald-50 px-2 py-1 rounded">
+        {/* Marca CENTRADA */}
+        <div className="flex justify-center mb-3">
+          <span className="inline-block bg-primary text-black px-3 py-1 rounded-lg font-bold text-xl">
             {product.brand}
           </span>
-          <h3 className="text-xl font-bold text-gray-800 mt-2">{product.name}</h3>
+        </div>
+
+        {/* Nombre y sabor CENTRADOS */}
+        <div className="text-center mb-4">
+          <h3 className="text-xl font-bold text-gray-800">{product.name}</h3>
           <p className="text-gray-600 text-sm">Sabor: {product.flavor_es}</p>
         </div>
         
-        {/* Precio */}
-        <div className="flex justify-between items-center mb-4">
+        {/* Precio CENTRADO */}
+        <div className="text-center mb-4">
           <p className="text-2xl font-bold text-gray-900">${product.price}</p>
         </div>
         
@@ -62,11 +78,11 @@ const ProductCard = ({ product }) => {
         }`}>
           {hasStock ? (
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <span>📦</span>
                 <span>Móvil: {product.stock_mobile} unidades</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <span>🏠</span>
                 <span>Depósito: {product.stock_warehouse} unidades</span>
               </div>
@@ -90,7 +106,6 @@ const ProductCard = ({ product }) => {
             {hasStock ? 'Agregar al carrito' : 'Sin stock'}
           </button>
           
-          {/* Botón detalle */}
           <Link
             to={`/product/${product.id}`}
             className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition flex items-center justify-center text-xl"
