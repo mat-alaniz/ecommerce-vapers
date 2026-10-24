@@ -45,7 +45,7 @@ app.get('/api/health', async (req, res) => {
 // INICIAR SERVIDOR
 // ========================
 
-app.listen(PORT, async () => {
+app.listen(PORT,'0.0.0.0', async () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   
   // Verificar conexión con Supabase
