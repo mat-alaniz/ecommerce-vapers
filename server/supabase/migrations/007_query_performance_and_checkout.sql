@@ -199,12 +199,10 @@ begin
   v_running_units := v_initial_units;
 
   for v_item in
-    select item.product_id, item.quantity
-    from jsonb_to_recordset(p_items) with ordinality as item(
-      product_id integer,
-      quantity integer,
-      item_ordinality bigint
-    )
+    select
+      (item.elem->>'product_id')::integer as product_id,
+      (item.elem->>'quantity')::integer as quantity
+    from jsonb_array_elements(p_items) with ordinality as item(elem, item_ordinality)
     order by item.item_ordinality
   loop
     select price
