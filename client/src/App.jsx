@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
 import AdminRoute from './components/AdminRoute'
+import Footer from './components/Footer'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const CartPage = lazy(() => import('./pages/CartPage'))
@@ -17,8 +18,9 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
+      <main className="flex-grow">
       <Suspense fallback={<div className="container mx-auto px-4 py-16 text-center">Cargando...</div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -37,6 +39,8 @@ function App() {
           } />
         </Routes>
       </Suspense>
+      </main>
+      <Footer />
       <Toaster 
         position="top-center"
         reverseOrder={false}
